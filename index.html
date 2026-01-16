@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1F4E79" />
+  <link rel="manifest" href="manifest.json" />
+  <title>24h Fluids & Calories</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#0f1a30;
+      --card2:#0c162b;
+      --text:#e9eefc;
+      --muted:#b8c2df;
+      --accent:#5aa7ff;
+      --warn:#ffd166;
+      --border:rgba(255,255,255,.10);
+      --input:#111e38;
+      --radius:16px;
+      --pad:14px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body{
+      margin:0; background:linear-gradient(180deg, #081022, #070c18);
+      color:var(--text); font-family:var(--font);
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      padding: 14px 14px 10px 14px;
+      background:rgba(7,12,24,.92);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+    }
+    header .title{font-weight:800; font-size:18px; letter-spacing:.2px;}
+    header .sub{color:var(--muted); font-size:12px; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border:1px solid var(--border); border-radius:999px;
+      background:rgba(15,26,48,.75);
+    }
+    .pill label{font-size:12px; color:var(--muted);}
+    .pill input{
+      width:82px; background:transparent; border:none; color:var(--text);
+      font-weight:700; font-size:14px; outline:none;
+    }
+    main{padding:14px; padding-bottom:120px;}
+    .grid{display:grid; gap:12px;}
+    .card{
+      background:linear-gradient(180deg, rgba(15,26,48,.92), rgba(12,22,43,.92));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:var(--pad);
+    }
+    .card h2{
+      margin:0 0 10px 0; font-size:14px; letter-spacing:.3px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .muted{color:var(--muted); font-size:12px;}
+    table{width:100%; border-collapse:separate; border-spacing:0 8px;}
+    th{font-size:11px; color:var(--muted); font-weight:700; text-align:left; padding:0 6px 4px 6px;}
+    td{padding:0 6px;}
+    input.cell{
+      width:100%; box-sizing:border-box;
+      background:var(--input); border:1px solid var(--border);
+      border-radius:12px; padding:10px 10px;
+      color:var(--text); font-size:14px; font-weight:650;
+      outline:none;
+      font-variant-numeric: tabular-nums;
+    }
+    input.cell:focus{border-color: rgba(90,167,255,.7); box-shadow: 0 0 0 3px rgba(90,167,255,.15);}
+    .rowtag{font-weight:800; font-size:12px; color:#d7e3ff;}
+    .out{
+      display:grid; grid-template-columns: 1fr auto; gap:8px;
+      padding:10px 12px; border:1px solid var(--border);
+      border-radius:12px; background:rgba(17,30,56,.55);
+      margin-top:8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .out .k{color:var(--muted); font-size:12px; font-weight:700;}
+    .out .v{font-size:16px; font-weight:900; letter-spacing:.2px;}
+    .out.small .v{font-size:14px; font-weight:800;}
+    .banner{
+      margin-top:8px; padding:10px 12px; border-radius:12px;
+      border:1px solid var(--border); background:rgba(255,209,102,.10);
+      color:var(--warn); font-weight:800; font-size:12px; display:none;
+    }
+    .footerbar{
+      position:fixed; left:0; right:0; bottom:0; z-index:20;
+      background:rgba(7,12,24,.92); border-top:1px solid var(--border);
+      backdrop-filter: blur(10px);
+      padding:10px 14px calc(10px + env(safe-area-inset-bottom)) 14px;
+    }
+    .footergrid{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    .btn{
+      border:none; border-radius:14px; padding:12px 12px;
+      font-weight:900; font-size:14px; color:var(--text);
+      background:rgba(90,167,255,.22); border:1px solid rgba(90,167,255,.35);
+    }
+    .btn.secondary{
+      background:rgba(255,255,255,.07); border:1px solid var(--border);
+      color:var(--text);
+    }
+    select{
+      width:100%; background:rgba(255,255,255,.07); color:var(--text);
+      border:1px solid var(--border); border-radius:12px;
+      padding:10px 10px; font-weight:800;
+    }
+    .toprow{
+      display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+      margin-top:10px;
+    }
+    .chip{font-size:11px; color:var(--muted);}
+    .flex{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    .mono{font-variant-numeric: tabular-nums;}
+  </style>
+</head>
+<body>
+<header>
+  <div class="title">24h Fluids & Calories</div>
+  <div class="sub">
+    <div class="pill"><label>Weight (kg)</label><input id="wt" inputmode="decimal" placeholder="3.0" /></div>
+    <div class="pill"><label>Fluid goal (mL/kg/day)</label><input id="goal" inputmode="decimal" placeholder="140" /></div>
+  </div>
+  <div class="toprow">
+    <div class="flex">
+      <span class="chip">Patient</span>
+      <select id="patientSelect"></select>
+    </div>
+    <button class="btn secondary" id="newPatientBtn">New</button>
+  </div>
+</header>
+
+<main class="grid">
+  <section class="card" id="ivCard">
+    <h2>IV Fluids <span class="muted">Enter D% + Rate OR 24h Volume</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:64px;">Line</th>
+          <th style="width:72px;">D%</th>
+          <th>Rate</th>
+          <th>24h Vol</th>
+          <th style="width:84px;">GIR</th>
+        </tr>
+      </thead>
+      <tbody id="ivRows"></tbody>
+    </table>
+    <div class="out small"><div class="k">Total IV Volume (mL/24h)</div><div class="v mono" id="ivVol">—</div></div>
+    <div class="out small"><div class="k">IV Contribution (mL/kg/day)</div><div class="v mono" id="ivMLKG">—</div></div>
+  </section>
+
+  <section class="card" id="feedCard">
+    <h2>Feeds <span class="muted">Enter kcal/oz + Volume OR mL/feed × feeds/day</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:64px;">Feed</th>
+          <th style="width:86px;">kcal/oz</th>
+          <th>mL/feed</th>
+          <th>×/day</th>
+          <th>24h Vol</th>
+        </tr>
+      </thead>
+      <tbody id="feedRows"></tbody>
+    </table>
+    <div class="out small"><div class="k">Total Feed Volume (mL/24h)</div><div class="v mono" id="feedVol">—</div></div>
+    <div class="out small"><div class="k">Feed Contribution (mL/kg/day)</div><div class="v mono" id="feedMLKG">—</div></div>
+  </section>
+
+  <section class="card">
+    <h2>Outputs <span class="muted">Decision block</span></h2>
+    <div class="out"><div class="k">TOTAL Fluids (mL/kg/day)</div><div class="v mono" id="totalMLKG">—</div></div>
+    <div class="out"><div class="k">Variance vs Goal</div><div class="v mono" id="variance">—</div></div>
+    <div class="out"><div class="k">TOTAL Calories (kcal/kg/day)</div><div class="v mono" id="totalKCALKG">—</div></div>
+    <div class="banner" id="warnBanner"></div>
+  </section>
+</main>
+
+<div class="footerbar">
+  <div class="footergrid">
+    <button class="btn secondary" id="saveBtn">Save</button>
+    <button class="btn" id="shareBtn">Share summary</button>
+  </div>
+</div>
+
+<script>
+function n(x){ const v = parseFloat(x); return Number.isFinite(v) ? v : 0; }
+function fmt(x, d=1){ if(!Number.isFinite(x)) return "—"; return x.toFixed(d); }
+function ozFromMl(ml){ return ml / 29.5735; }
+function ivVolUsed(rate, vol){ return vol>0 ? vol : rate*24; }
+function ivRateUsed(rate, vol){ return vol>0 ? (vol/24) : rate; }
+function gir(dPct, rateMlHr, wtKg){
+  if(wtKg<=0 || rateMlHr<=0 || dPct<=0) return 0;
+  return (dPct * 10 * rateMlHr) / (wtKg * 60);
+}
+function ivKcalDay(dPct, volMlDay){
+  if(dPct<=0 || volMlDay<=0) return 0;
+  return (dPct/100) * volMlDay * 3.4;
+}
+function feedVolUsed(mlFeed, perDay, vol){ return vol>0 ? vol : (mlFeed*perDay); }
+function feedKcalDay(kcalOz, volMlDay){
+  if(kcalOz<=0 || volMlDay<=0) return 0;
+  return kcalOz * ozFromMl(volMlDay);
+}
+
+const KEY = "neonatal24h_patients_v1";
+function loadAll(){ try{ return JSON.parse(localStorage.getItem(KEY) || "[]"); }catch{ return []; } }
+function saveAll(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
+function newPatient(name){
+  const now = new Date();
+  return {
+    id: (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)),
+    name: name || ("Patient " + (now.toLocaleDateString() + " " + now.toLocaleTimeString())),
+    updatedAt: now.toISOString(),
+    wt: "", goal: "",
+    iv: [{d:"10", rate:"", vol:""},{d:"", rate:"", vol:""},{d:"", rate:"", vol:""}],
+    feeds: [{kcal:"20", mlFeed:"", perDay:"", vol:""},{kcal:"", mlFeed:"", perDay:"", vol:""}]
+  };
+}
+
+let patients = loadAll();
+if(patients.length===0){ patients = [newPatient("Patient 1")]; saveAll(patients); }
+let currentId = patients[0].id;
+
+function getCurrent(){ return patients.find(p=>p.id===currentId) || patients[0]; }
+
+function renderSelect(){
+  const sel = document.getElementById("patientSelect");
+  sel.innerHTML = "";
+  patients.forEach(p=>{
+    const opt = document.createElement("option");
+    opt.value = p.id; opt.textContent = p.name;
+    if(p.id===currentId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function touch(){
+  const p = getCurrent();
+  p.updatedAt = new Date().toISOString();
+  p.wt = document.getElementById("wt").value;
+  p.goal = document.getElementById("goal").value;
+  saveAll(patients);
+}
+
+function makeCell(value, placeholder, oninput){
+  const inp = document.createElement("input");
+  inp.className = "cell";
+  inp.inputMode = "decimal";
+  inp.placeholder = placeholder || "";
+  inp.value = value || "";
+  inp.addEventListener("input", oninput);
+  return inp;
+}
+
+function renderForm(){
+  const p = getCurrent();
+  document.getElementById("wt").value = p.wt || "";
+  document.getElementById("goal").value = p.goal || "";
+
+  const ivBody = document.getElementById("ivRows");
+  ivBody.innerHTML = "";
+  p.iv.forEach((line, idx)=>{
+    const tr = document.createElement("tr");
+    const td0 = document.createElement("td"); td0.innerHTML = `<div class="rowtag">IV ${idx+1}</div>`; tr.appendChild(td0);
+
+    const td1 = document.createElement("td");
+    td1.appendChild(makeCell(line.d, "10", (e)=>{ line.d=e.target.value; touch(); compute(); }));
+    tr.appendChild(td1);
+
+    const td2 = document.createElement("td");
+    td2.appendChild(makeCell(line.rate, "mL/hr", (e)=>{ line.rate=e.target.value; touch(); compute(); }));
+    tr.appendChild(td2);
+
+    const td3 = document.createElement("td");
+    td3.appendChild(makeCell(line.vol, "mL/24h", (e)=>{ line.vol=e.target.value; touch(); compute(); }));
+    tr.appendChild(td3);
+
+    const td4 = document.createElement("td");
+    td4.innerHTML = `<div class="mono" id="gir_${idx}">—</div>`;
+    tr.appendChild(td4);
+
+    ivBody.appendChild(tr);
+  });
+
+  const feedBody = document.getElementById("feedRows");
+  feedBody.innerHTML = "";
+  p.feeds.forEach((line, idx)=>{
+    const tr = document.createElement("tr");
+    const td0 = document.createElement("td"); td0.innerHTML = `<div class="rowtag">F${idx+1}</div>`; tr.appendChild(td0);
+
+    const td1 = document.createElement("td");
+    td1.appendChild(makeCell(line.kcal, "20", (e)=>{ line.kcal=e.target.value; touch(); compute(); }));
+    tr.appendChild(td1);
+
+    const td2 = document.createElement("td");
+    td2.appendChild(makeCell(line.mlFeed, "mL", (e)=>{ line.mlFeed=e.target.value; touch(); compute(); }));
+    tr.appendChild(td2);
+
+    const td3 = document.createElement("td");
+    td3.appendChild(makeCell(line.perDay, "x/day", (e)=>{ line.perDay=e.target.value; touch(); compute(); }));
+    tr.appendChild(td3);
+
+    const td4 = document.createElement("td");
+    td4.appendChild(makeCell(line.vol, "mL/24h", (e)=>{ line.vol=e.target.value; touch(); compute(); }));
+    tr.appendChild(td4);
+
+    feedBody.appendChild(tr);
+  });
+}
+
+function compute(){
+  const p = getCurrent();
+  const wtKg = n(document.getElementById("wt").value);
+  const goal = n(document.getElementById("goal").value);
+
+  let ivVol=0, ivKcal=0;
+  p.iv.forEach((line, idx)=>{
+    const dPct=n(line.d), rate=n(line.rate), vol=n(line.vol);
+    const volDay = ivVolUsed(rate, vol);
+    const rateUse = ivRateUsed(rate, vol);
+    const g = gir(dPct, rateUse, wtKg);
+    const kcal = ivKcalDay(dPct, volDay);
+    ivVol += volDay; ivKcal += kcal;
+    const gEl = document.getElementById("gir_"+idx);
+    if(gEl) gEl.textContent = (g>0 ? fmt(g,2) : "—");
+  });
+
+  let feedVol=0, feedKcal=0;
+  p.feeds.forEach((line)=>{
+    const kcalOz=n(line.kcal), mlFeed=n(line.mlFeed), perDay=n(line.perDay), vol=n(line.vol);
+    const volDay = feedVolUsed(mlFeed, perDay, vol);
+    feedVol += volDay;
+    feedKcal += feedKcalDay(kcalOz, volDay);
+  });
+
+  const ivMLKG = wtKg>0 ? ivVol/wtKg : NaN;
+  const feedMLKG = wtKg>0 ? feedVol/wtKg : NaN;
+  const totalMLKG = wtKg>0 ? (ivVol+feedVol)/wtKg : NaN;
+  const totalKCALKG = wtKg>0 ? (ivKcal+feedKcal)/wtKg : NaN;
+  const variance = wtKg>0 ? (totalMLKG - goal) : NaN;
+
+  document.getElementById("ivVol").textContent = (ivVol>0 ? fmt(ivVol,0) : "—");
+  document.getElementById("feedVol").textContent = (feedVol>0 ? fmt(feedVol,0) : "—");
+  document.getElementById("ivMLKG").textContent = (Number.isFinite(ivMLKG) ? fmt(ivMLKG,1) : "—");
+  document.getElementById("feedMLKG").textContent = (Number.isFinite(feedMLKG) ? fmt(feedMLKG,1) : "—");
+  document.getElementById("totalMLKG").textContent = (Number.isFinite(totalMLKG) ? fmt(totalMLKG,1) : "—");
+  document.getElementById("totalKCALKG").textContent = (Number.isFinite(totalKCALKG) ? fmt(totalKCALKG,1) : "—");
+  document.getElementById("variance").textContent = (Number.isFinite(variance) ? fmt(variance,1) : "—");
+
+  const banner = document.getElementById("warnBanner");
+  let msgs = [];
+  if(wtKg<=0) msgs.push("Enter weight.");
+  if(goal>0 && Number.isFinite(totalMLKG)){
+    const pct = Math.abs(totalMLKG-goal)/goal;
+    if(pct >= 0.10) msgs.push("Total fluids differ from goal by ≥10%.");
+  }
+  if(Number.isFinite(totalKCALKG)){
+    if(totalKCALKG>0 && (totalKCALKG<90 || totalKCALKG>130)) msgs.push("Calories outside 90–130 kcal/kg/day.");
+  }
+  if(msgs.length){ banner.style.display="block"; banner.textContent = msgs.join(" "); }
+  else{ banner.style.display="none"; banner.textContent=""; }
+}
+
+function summaryText(){
+  const wt = document.getElementById("wt").value || "—";
+  const goal = document.getElementById("goal").value || "—";
+  const ivVol = document.getElementById("ivVol").textContent;
+  const feedVol = document.getElementById("feedVol").textContent;
+  const totalMLKG = document.getElementById("totalMLKG").textContent;
+  const totalKCALKG = document.getElementById("totalKCALKG").textContent;
+  const variance = document.getElementById("variance").textContent;
+  return `24h Fluids & Calories\nWeight: ${wt} kg\nGoal: ${goal} mL/kg/day\nIV volume: ${ivVol} mL\nFeed volume: ${feedVol} mL\nTotal fluids: ${totalMLKG} mL/kg/day (Δ ${variance})\nTotal calories: ${totalKCALKG} kcal/kg/day`;
+}
+
+document.getElementById("wt").addEventListener("input", ()=>{ touch(); compute(); });
+document.getElementById("goal").addEventListener("input", ()=>{ touch(); compute(); });
+document.getElementById("patientSelect").addEventListener("change", (e)=>{ currentId=e.target.value; renderSelect(); renderForm(); compute(); });
+document.getElementById("newPatientBtn").addEventListener("click", ()=>{
+  const name = prompt("Patient name (optional):");
+  const p = newPatient(name || undefined);
+  patients.unshift(p);
+  saveAll(patients);
+  currentId = p.id;
+  renderSelect(); renderForm(); compute();
+});
+document.getElementById("saveBtn").addEventListener("click", ()=>{ touch(); alert("Saved on this iPhone (local storage)."); });
+document.getElementById("shareBtn").addEventListener("click", async ()=>{
+  const text = summaryText();
+  try{
+    if(navigator.share){ await navigator.share({ title:"24h Fluids & Calories", text }); }
+    else{ await navigator.clipboard.writeText(text); alert("Copied summary to clipboard."); }
+  }catch{
+    try{ await navigator.clipboard.writeText(text); alert("Copied summary to clipboard."); }
+    catch{ alert(text); }
+  }
+});
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=> navigator.serviceWorker.register("sw.js"));
+}
+
+renderSelect();
+renderForm();
+compute();
+</script>
+</body>
+</html>
